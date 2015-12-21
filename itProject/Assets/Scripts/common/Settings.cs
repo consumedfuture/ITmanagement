@@ -3,60 +3,58 @@ using System.Collections;
 
 public class Settings : MonoBehaviour {
 
-	static public bool MusicOn = true;
-	static public bool EnvironmentOn = true;
-	static public bool EffectsOn = true;
-	static public int TextMode = 2;
-	static public int AutoMode = 2;
-	static public float TextSpeed = 0.075f;
-	static public float AutoTime = 1;
-	static public float AutoMultiplier = 0.03f;
-	static public bool hasLoaded = false;
+    static public bool MusicOn = true;
+    static public bool SoundOn = true;
+    static public bool Russian = true;
+    static public int MaxLevel = 0;
 	// Use this for initialization
 	void Start () {
-		if (PlayerPrefs.HasKey("MusicOn"))
-			MusicOn = PlayerPrefs.GetInt("MusicOn")==1;
-		if (PlayerPrefs.HasKey("EnvironmentOn"))
-			EnvironmentOn = PlayerPrefs.GetInt("EnvironmentOn")==1;
-		if (PlayerPrefs.HasKey("EffectsOn"))
-			EffectsOn = PlayerPrefs.GetInt("EffectsOn")==1;
-		if (PlayerPrefs.HasKey("TextMode"))
-			TextMode = PlayerPrefs.GetInt("TextMode");
-		if (PlayerPrefs.HasKey("AutoMode"))
-			AutoMode = PlayerPrefs.GetInt("AutoMode");
-		if (PlayerPrefs.HasKey("MaxLevel"))
-			Scenario.MaxLevel = PlayerPrefs.GetInt("MaxLevel");
-		hasLoaded = true;
+        Load();
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		switch (TextMode)
-		{
-		case 1:
-			TextSpeed = 0.025f;
-			break;
-		case 2:
-			TextSpeed = 0.075f;
-			break;
-		case 3:
-			TextSpeed = 0.125f;
-			break;
-		}
-		switch (AutoMode)
-		{
-		case 1:
-			AutoTime = 0.5f;
-			AutoMultiplier = 0.02f;
-			break;
-		case 2:
-			AutoTime = 1;
-			AutoMultiplier = 0.03f;
-			break;
-		case 3:
-			AutoTime = 1.5f;
-			AutoMultiplier = 0.05f;
-			break;
-		}
+	
 	}
+
+    static public void SwitchMusic()
+    {
+        MusicOn = !MusicOn;
+        PlayerPrefs.SetInt("MusicOn", MusicOn.GetHashCode());
+    }
+
+    static public void SwitchSound()
+    {
+        SoundOn = !SoundOn;
+        PlayerPrefs.SetInt("SoundOn", SoundOn.GetHashCode());
+    }
+
+    static public void SwitchLanguage()
+    {
+        Russian = !Russian;
+        PlayerPrefs.SetInt("Russian", Russian.GetHashCode());
+    }
+
+    static public void UpdateMaxLevel(int lvl)
+    {
+        if (lvl > MaxLevel)
+        {
+            MaxLevel = lvl;
+            PlayerPrefs.SetInt("MaxLevel", MaxLevel);
+        }
+    }
+
+    static void Load()
+    {
+        if (PlayerPrefs.HasKey("MusicOn"))
+            MusicOn = PlayerPrefs.GetInt("MusicOn").Equals(1);
+        if (PlayerPrefs.HasKey("SoundOn"))
+            SoundOn = PlayerPrefs.GetInt("SoundOn").Equals(1);
+        if (PlayerPrefs.HasKey("Russian"))
+            Russian = PlayerPrefs.GetInt("Russian").Equals(1);
+        else
+            Russian = Application.systemLanguage == SystemLanguage.Russian;
+        if (PlayerPrefs.HasKey("MaxLevel"))
+            MaxLevel = PlayerPrefs.GetInt("MaxLevel");
+    }
 }
