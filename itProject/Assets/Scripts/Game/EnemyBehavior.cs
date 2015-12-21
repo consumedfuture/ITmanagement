@@ -7,6 +7,10 @@ public class EnemyBehavior : MonoBehaviour {
 	public int HealthPoints;
 	public float MoveSpeed;
 	public int Damage;
+    public int Drop;
+    public Color FreezeColor;
+    public Color MeteoraColor;
+    float SpeedKoef = 1;
 	Vector2 StartPosition;
 	Vector2 Step;
 	Field.Instruction[] Movings;
@@ -14,6 +18,9 @@ public class EnemyBehavior : MonoBehaviour {
 	Vector2 currentPosition;
 	private int MaxHealthPoints;
 	static float VerticalMultiplier = 1.2f;
+    static float ShootingPeriopd = 0.5f;
+    static float NearMult = 0.5f;
+    Color StandartColor;
 	// Use this for initialization
 	void Start () {
 		itsTransform = this.GetComponent<RectTransform> ();
@@ -22,6 +29,7 @@ public class EnemyBehavior : MonoBehaviour {
 		Step = Field.Step;
 		Movings = Field.MoveInstructions;
 		MaxHealthPoints = HealthPoints;
+        StandartColor = GetComponent<Image>().color;
 		Init ();
 		StartCoroutine (Moving ());
 	}
@@ -41,26 +49,34 @@ public class EnemyBehavior : MonoBehaviour {
 			float x = 0, y = 0, border = 0; 
 			if (Movings[i].Direction==Field.MoveDirection.Right)
 			{
-				x = MoveSpeed;
+				x = MoveSpeed*SpeedKoef;
 				border = Movings[i].Steps*Step.x;
 			}
 			if (Movings[i].Direction==Field.MoveDirection.Left)
 			{
-				x = -MoveSpeed;
+				x = -MoveSpeed*SpeedKoef;
 				border = Movings[i].Steps*Step.x;
 			}
 			if (Movings[i].Direction==Field.MoveDirection.Up)
 			{
-				y = MoveSpeed*VerticalMultiplier;
+				y = MoveSpeed*SpeedKoef*VerticalMultiplier;
 				border = Movings[i].Steps*Step.y/VerticalMultiplier;
 			}
 			if (Movings[i].Direction==Field.MoveDirection.Down)
 			{
-				y = -MoveSpeed*VerticalMultiplier;
+				y = -MoveSpeed*SpeedKoef*VerticalMultiplier;
 				border = Movings[i].Steps*Step.y/VerticalMultiplier;
 			}
-			part += MoveSpeed;
-			Move (x, y);
+            GameObject gm = WallNear();
+            if (gm == null)
+            {
+                part += MoveSpeed * SpeedKoef;
+                Move(x, y);
+            }
+            else
+            {
+                yield return StartCoroutine(KillWall(gm));
+            }
 			if (part>border)
 			{
 				part = 0;
@@ -68,7 +84,38 @@ public class EnemyBehavior : MonoBehaviour {
 			}
 			yield return null;
 		}
+        GameObject.FindGameObjectWithTag("MainBase").GetComponent<Base>().HealthPoints -= Damage;
+        SoundManager.BangBase();
+        Destroy(this.gameObject);
 	}
+
+    IEnumerator KillWall(GameObject target)
+    {
+        float per = ShootingPeriopd;
+        while (target!=null)
+        {
+            per += Time.deltaTime;
+            if (per >= ShootingPeriopd)
+            {
+                per = 0;
+                target.GetComponent<Wall>().Hit(Damage);
+            }
+            yield return null;
+        }
+    }
+
+    GameObject WallNear()
+    {
+        GameObject[] gms = GameObject.FindGameObjectsWithTag("Wall");
+        GameObject cur = null;
+        for (int i = 0; i < gms.Length; i++)
+            if ((GetPosition() - gms[i].GetComponent<Wall>().GetPosition()).magnitude < Field.Step.magnitude * NearMult)
+            {
+                cur = gms[i];
+                break;
+            }
+        return cur;
+    }
 
 	void Init()
 	{
@@ -98,6 +145,45 @@ public class EnemyBehavior : MonoBehaviour {
 
     void Die()
     {
+        SoundManager.MonsterDeath();
+        PlayerManagement.Gold += Drop;
         Destroy(this.gameObject);
+    }
+
+    public void FreezeEffect(float koef, float duration)
+    {
+        StartCoroutine(Freeze(koef, duration));
+    }
+
+    IEnumerator Freeze(float koef, float duration)
+    {
+        GetComponent<Image>().color = FreezeColor;
+        SpeedKoef = koef;
+        float tm = 0;
+        while (tm < duration)
+        {
+            tm += Time.deltaTime;
+            yield return null;
+        }
+        SpeedKoef = 1;
+        GetComponent<Image>().color = StandartColor;
+    }
+
+    public void MeteoraEffect(float damage, float duration)
+    {
+        HealthPoints -= (int)damage;
+        StartCoroutine(Meteora(duration));
+    }
+
+    IEnumerator Meteora(float duration)
+    {
+        GetComponent<Image>().color = MeteoraColor;
+        float tm = 0;
+        while (tm < duration)
+        {
+            tm += Time.deltaTime;
+            yield return null;
+        }
+        GetComponent<Image>().color = StandartColor;
     }
 }

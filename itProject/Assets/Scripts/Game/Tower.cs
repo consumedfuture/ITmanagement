@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Tower : MonoBehaviour {
 
@@ -8,12 +9,20 @@ public class Tower : MonoBehaviour {
 	public float ShootingRadius;
 	public int Damage;
 	public GameObject Bullet;
+	public int Cost;
+    public bool isFrozen;
+    public float FreezeKoef;
+    public float FreezeDuration;
+    public bool isBuffer;
+    public float BuffMultiplier;
+    static public Dictionary<Vector2, float> AllBuffs;
+    float eps = 0.01f;
 	RectTransform trans;
 	Vector2 pos;
 	// Use this for initialization
 	void Start () {
 		trans = this.GetComponent<RectTransform> ();
-		Init ();
+		//Init ();
 	}
 	
 	// Update is called once per frame
@@ -21,14 +30,27 @@ public class Tower : MonoBehaviour {
 	
 	}
 
-	public void Init()
+	public void Inst(Vector2 pos)
+	{
+		Position = pos;
+		Init ();
+	}
+
+	void Init()
 	{
 		Vector2 cur = Position;
-		cur.Scale (Field.Step);
+		//cur.Scale (Field.Step);
+		if (trans==null)
+			trans = this.GetComponent<RectTransform> ();
 		trans.anchorMin = cur;
 		trans.anchorMax = cur + Field.Step;
 		pos = (trans.anchorMin + trans.anchorMax) / 2;
-		StartCoroutine (Shooting ());
+        if (AllBuffs == null)
+            AllBuffs = new Dictionary<Vector2, float>();
+        if (!isBuffer)
+            StartCoroutine(Shooting());
+        else
+            Buff();
 	}
 
 	IEnumerator Shooting()
@@ -72,6 +94,56 @@ public class Tower : MonoBehaviour {
 			return;
 		GameObject _bullet = Instantiate (Bullet);
 		_bullet.GetComponent<RectTransform> ().SetParent (GameObject.Find ("Field").GetComponent<RectTransform> (), false);
-		_bullet.GetComponent<BulletTarget> ().Fire (Position + new Vector2 (1, 1), target, 25);
+        if (isFrozen)
+            _bullet.GetComponent<BulletTarget>().Fire(Position + Field.Step, target, CalcDamage(), FreezeKoef, FreezeDuration);
+        else
+            _bullet.GetComponent<BulletTarget>().Fire(Position + Field.Step, target, CalcDamage());
 	}
+
+    void Buff()
+    {
+        AddToDict(Position + new Vector2(Field.Step.x, 0), BuffMultiplier);
+        AddToDict(Position + new Vector2(-Field.Step.x, 0), BuffMultiplier);
+        AddToDict(Position + new Vector2(0, Field.Step.y), BuffMultiplier);
+        AddToDict(Position + new Vector2(0, -Field.Step.y), BuffMultiplier);
+    }
+
+    void AddToDict(Vector2 vec, float mult)
+    {
+        vec = RoundVector(vec);
+        if (AllBuffs.ContainsKey(vec))
+            AllBuffs[vec] *= mult;
+        else
+            AllBuffs.Add(vec, mult);
+    }
+
+    int CalcDamage()
+    {
+        int res = Damage;
+        Vector2 curPos = RoundVector(Position);
+        if (AllBuffs.ContainsKey(curPos))
+        {
+            res = (int)(res * AllBuffs[curPos]);
+        }
+        return res;
+    }
+
+    float Round(float a)
+    {
+        float res = (int)a;
+        float resadd = (int)((a - res) / eps);
+        res += resadd * eps;
+        return res;
+    }
+
+    Vector2 RoundVector(Vector2 vec)
+    {
+        return new Vector2(Round(vec.x), Round(vec.y));
+    }
+
+    static public void Reset()
+    {
+        if (AllBuffs!=null)
+            AllBuffs.Clear();
+    }
 }
